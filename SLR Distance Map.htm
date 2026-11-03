@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WRO 距離マップ</title>
+<style>
+:root{color-scheme:light;--bg:#f6f7fb;--surface:#fff;--ink:#191c20;--muted:#5e6269;--line:#dfe2e8;--accent:#405d92;--soft:#e8eefb;--mark:#ba1a1a;--shadow:0 2px 12px #18233a12}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#111318;--surface:#1b1d23;--ink:#e3e2e9;--muted:#c3c6d0;--line:#41434b;--accent:#b2c5ff;--soft:#29334a;--mark:#ffb4ab;--shadow:0 2px 14px #0005}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Segoe UI",sans-serif}header{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--surface);border-bottom:1px solid var(--line)}h1{font-size:20px;margin:0;font-weight:650;letter-spacing:.01em}.theme{border:0;border-radius:999px;background:var(--soft);color:var(--accent);padding:10px 16px;font:inherit;font-weight:600;cursor:pointer}.layout{max-width:1500px;margin:auto;padding:20px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}.map-card,.panel{background:var(--surface);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow)}.map-card{padding:12px;min-width:0;align-self:start}.map-wrap{position:relative;width:100%;line-height:0;overflow:hidden;border-radius:16px;touch-action:manipulation}#map{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}#overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.panel{padding:20px;display:flex;flex-direction:column;gap:18px;height:max-content}.panel h2{font-size:17px;margin:0 0 4px}.hint{margin:0;color:var(--muted);font-size:13px}.field{display:grid;gap:6px;color:var(--muted);font-size:13px;font-weight:550}.field input{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px}.field input:focus{outline:2px solid var(--accent);outline-offset:1px}.button{border:0;border-radius:999px;padding:11px 16px;background:var(--soft);color:var(--accent);font:inherit;font-weight:650;cursor:pointer}.button.primary{background:var(--accent);color:var(--surface)}.button.selected{box-shadow:0 0 0 2px var(--accent) inset}.row{display:flex;gap:8px}.row>*{flex:1}.divider{height:1px;background:var(--line)}.readout{padding:12px 14px;background:var(--bg);border-radius:16px}.readout small{display:block;color:var(--muted);font-size:12px}.readout strong{display:block;font-size:20px;font-variant-numeric:tabular-nums}.results{display:grid;grid-template-columns:1fr 1fr;gap:8px}.results .readout:last-child{grid-column:1/-1}.status{font-size:12px;color:var(--muted);min-height:18px}.legend{font-size:12px;color:var(--muted)}@media(max-width:900px){.layout{grid-template-columns:1fr;padding:12px}.panel{order:-1;display:grid;grid-template-columns:1fr 1fr}.panel .wide{grid-column:1/-1}header{padding:0 16px}}@media(max-width:520px){.panel{display:flex}h1{font-size:17px}}
+</style>
+</head>
+<body>
+<header><h1>WRO 距離マップ</h1><button id="themeBtn" class="theme" type="button">☾ ダーク</button></header>
+<main class="layout">
+ <section class="map-card"><label class="button" style="display:inline-flex;margin:0 0 10px;cursor:pointer">フィールド画像をアップロード<input id="imageUpload" type="file" accept="image/*" hidden></label><div class="map-wrap"><img id="map" alt="フィールド画像"><canvas id="overlay"></canvas></div><p class="legend">フィールドをクリックして座標を確認。二点測定では始点、終点の順にクリックします。</p></section>
+ <aside class="panel">
+  <section class="wide"><h2>原点 (0, 0)</h2><p class="hint">原点設定を押してから、フィールド上の位置をクリック。</p><div class="row" style="margin-top:10px"><button id="originBtn" class="button" type="button">原点を設定</button><button id="resetBtn" class="button" type="button">初期位置</button></div><div class="readout" style="margin-top:10px"><small>フィールド上の原点</small><strong id="originValue">—</strong></div></section>
+  <div class="divider wide"></div>
+  <section class="wide"><h2>クリック座標</h2><div class="readout"><small>カーソル位置 · 原点から (mm)</small><strong id="liveCoord">フィールド上にカーソルを移動</strong></div><div class="readout" style="margin-top:8px"><small>クリックした座標</small><strong id="coordValue">まだありません</strong></div><div id="coordHistory" style="display:grid;gap:6px;margin-top:8px;max-height:190px;overflow:auto"></div><button id="clearCoordHistory" class="button" type="button" style="margin-top:8px">履歴を消去</button></section>
+  <div class="divider wide"></div>
+  <section class="wide"><h2>二点間の測定</h2><p class="hint">始点と終点を順にクリックしてください。</p></section>
+  <label class="field">タイヤ直径 (mm)<input id="wheel" type="number" min="0.1" step="0.1" value="62.4"></label>
+  <div class="row wide"><button id="measureBtn" class="button primary" type="button">二点を測定</button><button id="clearBtn" class="button" type="button">クリア</button></div>
+  <div class="results wide"><div class="readout"><small>距離</small><strong id="distance">—</strong></div><div class="readout"><small>方向角</small><strong id="angle">—</strong></div><div class="readout"><small>タイヤ回転の必要度数</small><strong id="degrees">—</strong></div></div>
+  <div id="status" class="status wide" aria-live="polite"></div>
+ </aside>
+</main>
+<script>
+(()=>{
+ const W=2362,H=1143,img=document.getElementById('map'),wrap=document.querySelector('.map-wrap'),canvas=document.getElementById('overlay'),ctx=canvas.getContext('2d');
+ let origin={x:125,y:571},points=[],mode='point',hover=null,clickHistory=[];
+ const $=id=>document.getElementById(id),fmt=n=>Number(n).toFixed(1);
+ function draw(){const r=img.getBoundingClientRect();canvas.width=Math.round(r.width*devicePixelRatio);canvas.height=Math.round(r.height*devicePixelRatio);ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);ctx.clearRect(0,0,W,H);
+  ctx.lineWidth=5;ctx.font='bold 30px system-ui';ctx.textAlign='left';
+  const dot=(p,color,label)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,11,0,Math.PI*2);ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='white';ctx.stroke();ctx.fillStyle=color;ctx.fillText(label,p.x+16,p.y-14)};
+  dot(origin,'#176b55','0,0');points.forEach((p,i)=>dot(p,'#405d92',i===0?'A':'B'));
+  if(points.length===2){ctx.strokeStyle='#405d92';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);ctx.lineTo(points[1].x,points[1].y);ctx.stroke()}
+  if(hover){const s=250/H*H;ctx.fillStyle='rgba(64,93,146,.20)';ctx.strokeStyle='rgba(64,93,146,.75)';ctx.lineWidth=3;ctx.fillRect(hover.x-s/2,hover.y-s/2,s,s);ctx.strokeRect(hover.x-s/2,hover.y-s/2,s,s);ctx.beginPath();ctx.arc(hover.x,hover.y,4,0,Math.PI*2);ctx.fillStyle='#243f70';ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle='#fff';ctx.stroke()}
+  if(hover&&mode==='origin'){ctx.strokeStyle='#176b55';ctx.setLineDash([12,8]);ctx.lineWidth=4;ctx.beginPath();ctx.arc(hover.x,hover.y,16,0,Math.PI*2);ctx.stroke();ctx.setLineDash([])}
+ }
+ function dims(){return{w:img.naturalWidth||W,h:img.naturalHeight||H}}
+ function coords(e){const r=img.getBoundingClientRect(),d=dims();return{x:(e.clientX-r.left)/r.width*d.w,y:(e.clientY-r.top)/r.height*d.h}}
+ function field(p){return{x:(p.x-origin.x)*W/W,y:(origin.y-p.y)*H/H}}
+ // Field image corresponds to 2362 × 1143 mm; translate pixels from origin to mm.
+ function updateOrigin(){ $('originValue').textContent=`画像上 (${fmt(origin.x*2362/W)}, ${fmt((H-origin.y)*2362/H)}) mm` }
+ function updateMeasure(){if(points.length<2){$('distance').textContent=$('angle').textContent=$('degrees').textContent='—';return}const a=field(points[0]),b=field(points[1]),dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),ang=(Math.atan2(dx,dy)*180/Math.PI+360)%360,wheel=parseFloat($('wheel').value),deg=wheel>0?d/(Math.PI*wheel)*360:NaN;$('distance').textContent=`${fmt(d)} mm`;$('angle').textContent=`${fmt(ang)}°`;$('degrees').textContent=Number.isFinite(deg)?`${fmt(deg)}°`:'直径を入力';}
+ function updateCoord(p){const q=field(p);$('coordValue').textContent=`X ${fmt(q.x)} mm, Y ${fmt(q.y)} mm`}
+ img.addEventListener('load',()=>{origin={x:img.naturalWidth*125/W,y:img.naturalHeight*571/H};updateOrigin();draw()});window.addEventListener('resize',draw);$('wheel').addEventListener('input',updateMeasure);
+ $('imageUpload').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(!f.type.startsWith('image/')){ $('status').textContent='画像ファイルを選択してください';return }const u=URL.createObjectURL(f);img.onload=()=>{origin={x:img.naturalWidth/2,y:img.naturalHeight/2};points=[];updateOrigin();updateMeasure();draw();URL.revokeObjectURL(u);$('status').textContent=`画像を読み込みました (${img.naturalWidth} × ${img.naturalHeight} px)`};img.src=u});
+ wrap.addEventListener('pointermove',e=>{const r=img.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;hover=coords(e);const q=field(hover);$('liveCoord').textContent=`X ${fmt(q.x)} mm, Y ${fmt(q.y)} mm`;draw()});
+ wrap.addEventListener('pointerleave',()=>{hover=null;$('liveCoord').textContent='フィールド上にカーソルを移動';draw()});
+ wrap.addEventListener('click',e=>{if(e.target.closest('canvas'))return;const r=img.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)return;const p=coords(e);updateCoord(p);if(mode==='origin'){origin=p;mode='point';$('originBtn').classList.remove('selected');$('status').textContent='原点を更新しました';updateOrigin();points=[];updateMeasure()}else {const q=field(p);clickHistory.unshift({x:q.x,y:q.y});$('coordHistory').innerHTML=clickHistory.map((v,i)=>`<div style="padding:8px 10px;background:var(--bg);border-radius:12px;font-size:13px">${i+1}. X ${fmt(v.x)} mm, Y ${fmt(v.y)} mm</div>`).join('');if(mode==='measure'){points.push(p);if(points.length===2){mode='point';$('measureBtn').classList.remove('selected');$('status').textContent='測定完了';updateMeasure()}else $('status').textContent='終点をクリックしてください'}}draw()});
+ $('clearCoordHistory').onclick=()=>{clickHistory=[];$('coordHistory').innerHTML=''};
+ $('originBtn').onclick=()=>{mode=mode==='origin'?'point':'origin';$('originBtn').classList.toggle('selected',mode==='origin');$('status').textContent=mode==='origin'?'原点にする位置をクリックしてください':''};
+ $('resetBtn').onclick=()=>{origin={x:125,y:571};points=[];mode='point';updateOrigin();updateMeasure();draw();$('status').textContent='初期位置に戻しました'};
+ $('measureBtn').onclick=()=>{points=[];mode='measure';$('measureBtn').classList.add('selected');$('status').textContent='始点をクリックしてください';updateMeasure();draw()};
+ $('clearBtn').onclick=()=>{points=[];if(mode==='measure')mode='point';$('measureBtn').classList.remove('selected');updateMeasure();$('status').textContent='測定点をクリアしました';draw()};
+ $('themeBtn').onclick=()=>{const dark=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=dark?'dark':'light';$('themeBtn').textContent=dark?'☀ ライト':'☾ ダーク';try{localStorage.setItem('wroMapTheme',dark?'dark':'light')}catch{} };
+ try{const t=localStorage.getItem('wroMapTheme');if(t==='dark'){$('themeBtn').click()}}catch{} updateOrigin();draw();
+})();
+</script>
+</body></html>
